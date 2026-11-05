@@ -47,3 +47,34 @@ Każda szkodliwa wartość (poza `Complement`, który nie jest wyświetlany na l
 - `state` (`<img src=x onerror=alert('STATE')>`):
 
   ![Alert STATE na liście studentów](img/state.png)
+
+## Usunięcie podatności XSS
+
+W ramach przeciwdziałania podatności XSS wprowadzono walidację danych wejściowych na poziomie backendu. Ze względu na implementację pola formularza nie mogą zawierać znaków specjalnych HTML (`<`, `>`, `"`, `'`, `&`) ani znaków sterujących. Pozostałe znaki (litery i znaki diakrytryczne, cyfry, spacje, `-`, `,`, `.`, `/` itp.) są dozwolone.
+
+### Implementacja
+
+1. **Adnotacja `@SafeText`** (`validation/SafeText.java`) - autorski Bean Validator, który odrzuca wartości zawierające zabronione znaki. Adnotacja może być stosowana do pól, metod i parametrów.
+2. **Walidator `SafeTextValidator`** (`validation/SafeTextValidator.java`) - sprawdza wartość wyrażeniem regularnym `[^<>"'&\p{Cc}]*` - dopuszcza wyłącznie ciągi niezawierające zabronionych znaków. Wartość `null` jest uznawana za poprawną (brak wartości jest kontrolowany przez `@NotNull` i `@NotEmpty`).
+3. **Zastosowanie adnotacji** - adnotacja `@SafeText` dodana do pól: `name`, `email`, `zipCode`, `street`, `number`, `complement`, `district`, `city`, `state` w `CreateStudentDTO`.
+4. **Komunikat błędu** - klucz `SafeText` w `messages.properties`. Przy niepoprawnych danych formularz jest wyświetlany ponownie z komunikatem, a dane nie trafiają do bazy.
+
+```java
+@NotEmpty(message = "{NotEmpty.name}")
+@SafeText(message = "{SafeText.name}")
+private String name;
+```
+
+### Testy
+
+Dodano test jednostkowy `SafeTextValidatorTest`, który sprawdza działanie walidatora w trzech scenariuszach:
+- akceptacja poprawnych wartości (`null`, pusty ciąg, tekst z polskimi znakami, adres z przecinkiem i ukośnikiem)
+- odrzucenie payloadów XSS (`<img ... onerror=...>`, `<script>`, cudzysłowy, `&`, znak nowej linii, etc.)
+- odrzucenie payloadów we wszystkich sześciu podatnych polach na poziomie `CreateStudentDTO`
+
+### Weryfikacja
+
+Po ponownym zbudowaniu aplikacji wysłanie tych samych payloadów kończy się ponownym wyświetleniem formularza z komunikatem błędu, a na liście `/students` nie pojawia się żaden zapisany kod (brak `onerror`):
+
+  ![Formularz rejestracji studenta z komunikatami błędów walidacji](img/form-error.png)
+
