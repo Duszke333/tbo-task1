@@ -1,5 +1,7 @@
 # Model Domenowy Aplikacji Bankowej
 
+**Autor: Paweł Wysocki (325248)**
+
 ## 1. Opis Zadania
 
 Opracowany fragment Aplikacji Bankowej został stworzony zgodnie z zasadami Domain-Driven Design. Skupia się on na procesie realizacji płatności - model 
